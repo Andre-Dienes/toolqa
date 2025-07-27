@@ -1,0 +1,6 @@
+openmeteo_requests
+python-dotenv
+pandas
+numpy
+requests-cache 
+retry-requests
