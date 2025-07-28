@@ -14,7 +14,7 @@ Compile and save the generated test class in the IRIS environment;
 
 Provide an executable Run() method within the generated test class to perform the tests and report results.
 
-How It Works
+**How It Works**
 1. Input
 You call the method:
 
