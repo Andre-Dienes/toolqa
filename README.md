@@ -43,7 +43,7 @@ If a mapping exists, the generated dummy value is validated against the database
 The agent dynamically creates a new test class with the naming convention:
 
 
-AXS.QA.Tests.<APIClassName>Test
+ToolQA.QA.Tests.<APIClassName>Test
 The class contains a Run() class method that:
 
 Prints the test start message;
@@ -57,7 +57,7 @@ Reports test success or failure.
 5. Compilation and Execution
 The generated test class is saved as a .cls file and compiled automatically within IRIS. You then execute tests by running:
 
-DO ##class(AXS.QA.Tests.<APIClassName>Test).Run()
+DO ##class(ToolQA.QA.Tests.<APIClassName>Test).Run()
 How Responses and Results Are Handled
 The test class captures the return status (%Status) of each API method call;
 
@@ -126,11 +126,11 @@ In IRIS Terminal or Studio:
 DO ##class(ToolQA.tool.BP.Tool).GenerateTestForClass("ToolQA.tool.BP.forecast")
 This creates the test class:
 
-AXS.QA.Tests.forecastTest
+ToolQA.QA.Tests.forecastTest
 Step 7: Execute the Generated Tests
 In Terminal or Studio:
 
-DO ##class(AXS.QA.Tests.forecastTest).Run()
+DO ##class(ToolQA.QA.Tests.forecastTest).Run()
 Watch the output for:
 
 Test start message;
