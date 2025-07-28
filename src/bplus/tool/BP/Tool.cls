@@ -4,7 +4,7 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status
 {
     Try {
         Set classDef = ##class(%Dictionary.ClassDefinition).%OpenId(apiClassName)
-        If classDef = "" Quit $$$ERROR($$$GeneralError, "class não encontrada")
+        If classDef = "" Quit $$$ERROR($$$GeneralError, "class not found")
 
         Set testClassName = "AXS.QA.Tests."_$$LastPiece(apiClassName,".")_"Test"
         Set code = ""
