@@ -34,7 +34,7 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status
 
                     Set schemaclass = ..ClassBank(pName)
                     If schemaclass'="" {
-                        Set argsCode = argsCode _ "        Set sc = ##class(toolqa.src.bplus.tool.BP.Tool).ValidateValueField("""_schemaclass_""", """_pName_""", "_pName_")" _ $C(13,10)
+                        Set argsCode = argsCode _ "        Set sc = ##class(bplus.tool.BP.Tool).ValidateValueField("""_schemaclass_""", """_pName_""", "_pName_")" _ $C(13,10)
                         Set argsCode = argsCode _ "        If $$$ISERR(sc) Quit sc" _ $C(13,10)
                     }
 
