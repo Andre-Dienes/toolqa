@@ -81,7 +81,7 @@ ClassMethod ValidateValueField(class As %String, field As %String, value) As %St
     Try {
         Set propId = class_"||"_field
         Set prop = ##class(%Dictionary.CompiledPropertyDefinition).%OpenId(propId)
-        If '$IsObject(prop) Quit $$$ERROR($$$GeneralError, "field "_field_" não encontrado em "_class)
+        If '$IsObject(prop) Quit $$$ERROR($$$GeneralError, "field "_field_" not found in "_class)
 
         Set tipo = prop.Type
         Set maxlen = prop.MaxLen
@@ -89,16 +89,16 @@ ClassMethod ValidateValueField(class As %String, field As %String, value) As %St
         Set maxval = prop.MaxVal
 
         If tipo = "%Integer" {
-            If '$ZIsInteger(value) Quit $$$ERROR($$$GeneralError, field_": Esperado Integer, recebeu '"_value_"'")
+            If '$ZIsInteger(value) Quit $$$ERROR($$$GeneralError, field_": Expect Integer, received '"_value_"'")
         } ElseIf tipo = "%Double" {
-            If '$ZIsNumeric(value) Quit $$$ERROR($$$GeneralError, field_": Esperado Float, recebeu '"_value_"'")
+            If '$ZIsNumeric(value) Quit $$$ERROR($$$GeneralError, field_": Expect Float, received '"_value_"'")
         } ElseIf tipo = "%String" {
-            If (maxlen > 0) && ($Length(value) > maxlen) Quit $$$ERROR($$$GeneralError, field_": String excede limite de "_maxlen)
+            If (maxlen > 0) && ($Length(value) > maxlen) Quit $$$ERROR($$$GeneralError, field_": String exceeds limit "_maxlen)
         }
 
         If (tipo = "%Integer" || tipo = "%Double") {
-            If minval'="", value < minval Quit $$$ERROR($$$GeneralError, field_": menor que o mínimo permitido")
-            If maxval'="", value > maxval Quit $$$ERROR($$$GeneralError, field_": maior que o máximo permitido")
+            If minval'="", value < minval Quit $$$ERROR($$$GeneralError, field_": less than the minimum allowed")
+            If maxval'="", value > maxval Quit $$$ERROR($$$GeneralError, field_": greater than the maximum allowed")
         }
 
         Quit $$$OK
@@ -110,7 +110,7 @@ ClassMethod ValidateValueField(class As %String, field As %String, value) As %St
 ClassMethod CreateFakeValue(tipo As %String) As %String
 {
     Set tipo = $ZStrip(tipo, "<>")
-    If tipo = "%String" Quit """teste"""
+    If tipo = "%String" Quit """test"""
     If tipo = "%Integer" Quit "123"
     If tipo = "%Double" Quit "123.45"
     If tipo = "%Boolean" Quit "1"
@@ -118,12 +118,12 @@ ClassMethod CreateFakeValue(tipo As %String) As %String
 }
 ClassMethod SaveClass(nomeclass As %String, conteudo As %String) As %Status
 {
-    Set arquivo = nomeclass_".cls"
+    Set file = nomeclass_".cls"
     Set f = ##class(%Stream.FileCharacter).%New()
-    Set f.Filename = arquivo
+    Set f.Filename = file
     Do f.Write(conteudo)
     Do f.%Save()
-    Quit $System.OBJ.Load(arquivo, "ck")
+    Quit $System.OBJ.Load(file, "ck")
 }
 
 ClassMethod LastPiece(str As %String, delim As %String) As %String
