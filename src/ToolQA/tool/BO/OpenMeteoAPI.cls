@@ -1,4 +1,4 @@
-Class bplus.tool.BO.OpenMeteoAPI Extends Ens.BusinessOperation
+Class ToolQA.tool.BO.OpenMeteoAPI Extends Ens.BusinessOperation
 {
 
 Method OnMensage(pRequest As Ens.Request, Output pResponse As Ens.Response) As %Status
@@ -7,7 +7,7 @@ Method OnMensage(pRequest As Ens.Request, Output pResponse As Ens.Response) As %
         Try {
 
             Set tSC = ..FetchWeatherData(pRequest.startDate, pRequest.endDate, .response)
-            Set pResponse = ##class(bplus.tool.msg.Resp).%New()
+            Set pResponse = ##class(ToolQA.tool.msg.Resp).%New()
             Set pResponse.content = response
             
         } Catch ex {

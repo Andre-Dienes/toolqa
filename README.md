@@ -1,6 +1,6 @@
-📘 Description of bplus.tool.BP.Tool Test Generation Class
+📘 Description of ToolQA.tool.BP.Tool Test Generation Class
 Overview
-The class bplus.tool.BP.Tool is designed as an automated intelligent test agent for API classes in InterSystems IRIS. Its main responsibility is to:
+The class ToolQA.tool.BP.Tool is designed as an automated intelligent test agent for API classes in InterSystems IRIS. Its main responsibility is to:
 
 Automatically generate test classes for any provided API class;
 
@@ -18,7 +18,7 @@ Provide an executable Run() method within the generated test class to perform th
 1. Input
 You call the method:
 
-DO ##class(bplus.tool.BP.Tool).GenerateTestForClass("Your.API.ClassName")
+DO ##class(ToolQA.tool.BP.Tool).GenerateTestForClass("Your.API.ClassName")
 with the fully qualified name of the API class you want to test.
 
 2. Introspection and Metadata Analysis
@@ -115,7 +115,7 @@ Password: the one you set for ISC_PASSWORD
 Step 5: Import Your Classes
 You can either:
 
-Use the Management Portal’s Code Editor to paste your .cls code (including bplus.tool.BP.Tool and your API classes), then compile;
+Use the Management Portal’s Code Editor to paste your .cls code (including ToolQA.tool.BP.Tool and your API classes), then compile;
 OR
 
 Use Docker volumes or IRIS Terminal to load .cls files.
@@ -123,7 +123,7 @@ Use Docker volumes or IRIS Terminal to load .cls files.
 Step 6: Run the Test Generation
 In IRIS Terminal or Studio:
 
-DO ##class(bplus.tool.BP.Tool).GenerateTestForClass("bplus.tool.BP.forecast")
+DO ##class(ToolQA.tool.BP.Tool).GenerateTestForClass("ToolQA.tool.BP.forecast")
 This creates the test class:
 
 AXS.QA.Tests.forecastTest

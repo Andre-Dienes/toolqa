@@ -14,8 +14,8 @@ set sc = ##class(Config.Namespaces).Create("TOOL", .props)
 write "Namespace TOOL criado: ", sc, !
 
 // Carregar apenas as classes selecionadas
-do $system.OBJ.Load("/home/irisowner/dev/src/bplus/tool/BO/OpenMeteoAPI.cls", "ck")
-do $system.OBJ.Load("/home/irisowner/dev/src/bplus/tool/BP/forecast.cls", "ck")
-do $system.OBJ.Load("/home/irisowner/dev/src/bplus/tool/BP/Tool.cls", "ck")
+do $system.OBJ.Load("/home/irisowner/dev/src/ToolQA/tool/BO/OpenMeteoAPI.cls", "ck")
+do $system.OBJ.Load("/home/irisowner/dev/src/ToolQA/tool/BP/forecast.cls", "ck")
+do $system.OBJ.Load("/home/irisowner/dev/src/ToolQA/tool/BP/Tool.cls", "ck")
 
 halt

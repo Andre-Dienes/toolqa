@@ -1,4 +1,4 @@
-Class toolqa.src.bplus.tool.BD.database Extends %Persistent [ ClassType = persistent, DdlAllowed, Final, ProcedureBlock, SqlRowIdPrivate, SqlTableName = database ]
+Class ToolQA.tool.BD.database Extends %Persistent [ ClassType = persistent, DdlAllowed, Final, ProcedureBlock, SqlRowIdPrivate, SqlTableName = database ]
 {
 
 Index IdxKeydatabase On data [ PrimaryKey ];

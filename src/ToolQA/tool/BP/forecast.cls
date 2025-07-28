@@ -1,10 +1,10 @@
-Class bplus.tool.BP.forecast Extends Ens.BusinessProcess
+Class ToolQA.tool.BP.forecast Extends Ens.BusinessProcess
 {
-    Method OnRequest(pRequest As bplus.tool.msg.Req, Output pResponse As bplus.tool.msg.Resp) As %Status
+    Method OnRequest(pRequest As ToolQA.tool.msg.Req, Output pResponse As ToolQA.tool.msg.Resp) As %Status
 {
     Set tSC = $$$OK
     Try {
-        Set aRequest = ##Class(bplus.tool.msg.Req).%New()
+        Set aRequest = ##Class(ToolQA.tool.msg.Req).%New()
         Set aRequest.startDate = "2025-07-20"
         Set aRequest.endDate = "2025-07-20"
         $$$THROWONERROR(tSC,..SendRequestSync("RequestForecast",aRequest,.aResponse))

@@ -1,4 +1,4 @@
-Class bplus.Setup Extends %RegisteredObject
+Class ToolQA.Setup Extends %RegisteredObject
 {
 
 ClassMethod Init() As %Status
@@ -17,7 +17,7 @@ ClassMethod Init() As %Status
 
 ClassMethod StartProduction()
 {
-    Set prodClass = "bplus.tool.producao"
+    Set prodClass = "ToolQA.tool.producao"
     Do ##class(%EnsembleMgr).SetAutoStart($namespace, prodClass)
     Job ##class(Ens.Director).StartProduction(prodClass)
 }

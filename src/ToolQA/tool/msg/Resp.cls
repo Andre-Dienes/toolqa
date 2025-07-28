@@ -1,4 +1,4 @@
-Class bplus.tool.msg.Resp Extends Ens.Response
+Class ToolQA.tool.msg.Resp Extends Ens.Response
 {
 
 Property content As %String(MAXLEN = 100000);
