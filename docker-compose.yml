@@ -12,11 +12,8 @@ services:
       - 53773:53773
     volumes:
       - ./:/home/irisowner/dev
-    environment: 
-      - SCHEMA_COLLECTION=$SCHEMA_COLLECTION
-      - SAMPLE_COLLECTION=$SAMPLE_COLLECTION
     networks:
       - app-network 
 networks:
-  app-network:  # Define a rede `app-network`
+  app-network:
     driver: bridge

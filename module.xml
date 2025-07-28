@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Export generator="Cache" version="25">
-  <Document name="bplus-assistente.ZPM">
+  <Document name="bplus-tool.ZPM">
     <Module>
-      <Name>bplus-assistente</Name>
-      <Version>1.0.20</Version>
-      <Description>AVIBP Assistente Virtual Inteligente BPlus</Description>
+      <Name>bplus-tool</Name>
+      <Version>0.0.1</Version>
+      <Description>BPlus Tool for QA</Description>
       <Packaging>module</Packaging>
       <SourcesRoot>src</SourcesRoot>
       <Resource Name="bplus.PKG"/>
-      <CSPApplication CookiePath="/csp/assistente/api" DefaultTimeout="900" DispatchClass="bplus.i14y.service.Rest" PasswordAuthEnabled="0" Recurse="1" ServeFiles="1" ServeFilesTimeout="3600" UnauthenticatedEnabled="1" Url="/csp/assistente/api" UseSessionCookie="2" MatchRoles=":%All" />
       <Invoke Class="bplus.Setup" Method="Init" >
       </Invoke>
     </Module>

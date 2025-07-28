@@ -37,8 +37,8 @@ ClassMethod FetchWeatherData(startDate As %String, endDate As %String) As %Strin
             "minutely_15": ["global_tilted_irradiance", "global_tilted_irradiance_instant"],
             "timezone": "America/Sao_Paulo",
             "azimuth": 1.6,
-            "start_date": "2025-05-15",
-            "end_date": "2025-05-15",
+            "start_date": startDate,
+            "end_date": endDate,
         }
         responses = openmeteo.weather_api(url, params=params)
 
@@ -80,7 +80,7 @@ ClassMethod FetchWeatherData(startDate As %String, endDate As %String) As %Strin
         hourly_data["global_tilted_irradiance"] = hourly_global_tilted_irradiance
 
         hourly_dataframe = pd.DataFrame(data = hourly_data)
-        print("\nHourly data\n", hourly_dataframe)
+        return hourly_dataframe
 }
 
 }

@@ -1,5 +1,5 @@
 ARG IMAGE=intersystemsdc/iris-community:latest
-FROM $IMAGE as builder
+FROM $IMAGE AS builder
 
 WORKDIR /home/irisowner/dev
 
@@ -28,8 +28,7 @@ RUN --mount=type=bind,src=.,dst=. \
     ([ $TESTS -eq 0 ] || iris session iris -U $NAMESPACE "##class(%ZPM.PackageManager).Shell(\"test $MODULE -v -only\",1,1)") && \
     iris stop IRIS quietly
 
-
-FROM $IMAGE as final
+FROM $IMAGE AS final
 ADD --chown=${ISC_PACKAGE_MGRUSER}:${ISC_PACKAGE_IRISGROUP} https://github.com/grongierisc/iris-docker-multi-stage-script/releases/latest/download/copy-data.py /home/irisowner/dev/copy-data.py
 #ADD https://github.com/grongierisc/iris-docker-multi-stage-script/releases/latest/download/copy-data.py /home/irisowner/dev/copy-data.py
 

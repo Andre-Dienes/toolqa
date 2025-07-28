@@ -1,4 +1,4 @@
-Class bplus.i14y.msg.Req Extends Ens.Request
+Class bplus.tool.msg.Req Extends Ens.Request
 {
 
 Property startDate As %String;
