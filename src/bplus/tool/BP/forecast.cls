@@ -9,7 +9,8 @@ Class bplus.tool.BP.forecast Extends Ens.BusinessProcess
         Set aRequest.endDate = "2025-07-20"
         $$$THROWONERROR(tSC,..SendRequestSync("RequestForecast",aRequest,.aResponse))
         If $IsObject(aResponse)	{
-            Set tSC = aResponse
+            
+            //save to database or process the response as needed
         }
     } Catch ex {
         Set tSC = ex.AsStatus()
