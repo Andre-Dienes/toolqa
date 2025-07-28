@@ -1,28 +1,21 @@
-    zn "%SYS"
+zn "%SYS"
 
-    // Unexpire passwords and set up passwordless mode to simplify dev use.
-    // ** Comment out these two line for Production use **
-    do ##class(Security.Users).UnExpireUserPasswords("*")
-    zpm "install passwordless"
+// Criar database TOOL
+set sc = $SYSTEM.Database.Create("/usr/irissys/mgr/tool")
+write "Database TOOL criada: ", sc, !
 
-    // Enable callin for Embedded Python
-    do ##class(Security.Services).Get("%Service_CallIn",.prop)
-    set prop("Enabled")=1
-    set prop("AutheEnabled")=48
-    do ##class(Security.Services).Modify("%Service_CallIn",.prop)
+// Criar namespace TOOL
+new props
+set props("Globals") = "/usr/irissys/mgr/tool"
+set props("Routines") = "/usr/irissys/mgr/tool"
+set props("DefaultGlobals") = "/usr/irissys/mgr/tool"
+set props("DefaultRoutines") = "/usr/irissys/mgr/tool"
+set sc = ##class(Config.Namespaces).Create("TOOL", .props)
+write "Namespace TOOL criado: ", sc, !
 
-    // create TOOL namespace
-    do $SYSTEM.OBJ.Load("/home/irisowner/dev/App.Installer.cls", "ck")
-    set sc = ##class(App.Installer).setup()
+// Carregar apenas as classes selecionadas
+do $system.OBJ.Load("/home/irisowner/dev/src/bplus/tool/BO/OpenMeteoAPI.cls", "ck")
+do $system.OBJ.Load("/home/irisowner/dev/src/bplus/tool/BP/forecast.cls", "ck")
+do $system.OBJ.Load("/home/irisowner/dev/src/bplus/tool/BP/Tool.cls", "ck")
 
-    zn "TOOL"
-
-    // Create /_vscode web app to support intersystems-community.testingmanager VS Code extension
-    zpm "install vscode-per-namespace-settings"
-    zpm "install samples-bi"
-
-    // Configure %UnitTest in TOOL to suit the VS Code extension
-    set ^UnitTestRoot="/usr/irissys/.vscode/TOOL/UnitTestRoot"
-
-    zpm "load /home/irisowner/dev/ -v":1:1
-    halt
+halt
