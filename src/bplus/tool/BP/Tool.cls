@@ -53,11 +53,81 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status
         Set code = code _ "}" _ $C(13,10)
         Set code = code _ "}" _ $C(13,10)
 
-        Do ..Gravarclass(testClassName, code)
+        Do ..SaveClass(testClassName, code)
         Write "Generate class: ", testClassName,!
         Quit $$$OK
     } Catch ex {
         Write "Erro: ", ex.DisplayString(),!
         Quit ex.AsStatus()
     }
+}
+ClassMethod ClassBank(field As %String) As %String
+{
+    Set namespace = $Namespace
+    Set list = ##class(%Library.Routine).Listclasss()
+    While list.AtEnd() '= 1 {
+        Set cls = list.GetNext()
+        If cls["AXS.Model." {
+            Set prop = ##class(%Dictionary.CompiledPropertyDefinition).%ExistsId(cls_"||"_field)
+            If prop {
+                Quit
+            }
+        }
+    }
+    Quit ""
+}
+ClassMethod ValidateValueField(class As %String, field As %String, value) As %Status
+{
+    Try {
+        Set propId = class_"||"_field
+        Set prop = ##class(%Dictionary.CompiledPropertyDefinition).%OpenId(propId)
+        If '$IsObject(prop) Quit $$$ERROR($$$GeneralError, "field "_field_" não encontrado em "_class)
+
+        Set tipo = prop.Type
+        Set maxlen = prop.MaxLen
+        Set minval = prop.MinVal
+        Set maxval = prop.MaxVal
+
+        If tipo = "%Integer" {
+            If '$ZIsInteger(value) Quit $$$ERROR($$$GeneralError, field_": Esperado Integer, recebeu '"_value_"'")
+        } ElseIf tipo = "%Double" {
+            If '$ZIsNumeric(value) Quit $$$ERROR($$$GeneralError, field_": Esperado Float, recebeu '"_value_"'")
+        } ElseIf tipo = "%String" {
+            If (maxlen > 0) && ($Length(value) > maxlen) Quit $$$ERROR($$$GeneralError, field_": String excede limite de "_maxlen)
+        }
+
+        If (tipo = "%Integer" || tipo = "%Double") {
+            If minval'="", value < minval Quit $$$ERROR($$$GeneralError, field_": menor que o mínimo permitido")
+            If maxval'="", value > maxval Quit $$$ERROR($$$GeneralError, field_": maior que o máximo permitido")
+        }
+
+        Quit $$$OK
+    } Catch ex {
+        Quit ex.AsStatus()
+    }
+}
+
+ClassMethod CreateFakeValue(tipo As %String) As %String
+{
+    Set tipo = $ZStrip(tipo, "<>")
+    If tipo = "%String" Quit """teste"""
+    If tipo = "%Integer" Quit "123"
+    If tipo = "%Double" Quit "123.45"
+    If tipo = "%Boolean" Quit "1"
+    Quit """default"""
+}
+ClassMethod SaveClass(nomeclass As %String, conteudo As %String) As %Status
+{
+    Set arquivo = nomeclass_".cls"
+    Set f = ##class(%Stream.FileCharacter).%New()
+    Set f.Filename = arquivo
+    Do f.Write(conteudo)
+    Do f.%Save()
+    Quit $System.OBJ.Load(arquivo, "ck")
+}
+
+ClassMethod LastPiece(str As %String, delim As %String) As %String
+{
+    Quit $Piece(str, delim, * )
+}
 }
