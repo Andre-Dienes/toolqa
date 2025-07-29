@@ -7,7 +7,7 @@ Class ToolQA.tool.BP.forecast Extends Ens.BusinessProcess
         Set aRequest = ##Class(ToolQA.tool.msg.Req).%New()
         Set aRequest.startDate = "2025-07-20"
         Set aRequest.endDate = "2025-07-20"
-        $$$THROWONERROR(tSC,..SendRequestSync("RequestForecast",aRequest,.aResponse))
+        $$$THROWONERROR(tSC,..SendRequestSync("OpenMeteo",aRequest,.aResponse))
         If $IsObject(aResponse)	{
             
             //save to database or process the response as needed
