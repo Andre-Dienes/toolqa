@@ -4,8 +4,6 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status [ Language 
 {
     import iris, os, sys, re, traceback
     from datetime import datetime
-
-    # Ensure tmp dir is portable
     try:
         tmpdir = iris.system.Util.GetEnviron("ISC_TMPDIR")
         if not tmpdir:
@@ -27,7 +25,6 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status [ Language 
             if not spec:
                 return params
 
-            # Split top-level commas (basic split; IRIS formal specs are usually simple)
             param_list = spec.split(',')
 
             for param in param_list:
@@ -37,16 +34,11 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status [ Language 
 
                 parts = param.split(':')
                 param_name = parts[0].strip()
-
-                # Remove ByRef/Output/& tokens
                 param_name = re.sub(r'^(ByRef\s+|Output\s+|&)', '', param_name, flags=re.IGNORECASE)
-                # Remove default assignment if present in the name part (rare)
                 param_name = param_name.split('=')[0].strip()
-
                 param_type = '%String'
                 if len(parts) > 1:
                     type_part = parts[1].strip()
-                    # Remove default values in type part
                     type_part = type_part.split('=')[0].strip()
                     if type_part:
                         param_type = type_part
@@ -108,7 +100,6 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status [ Language 
                 prop_id = f"{class_name}||{field_name}"
                 prop = iris.cls('%Dictionary.CompiledPropertyDefinition')._OpenId(prop_id)
                 if not prop:
-                    # property not found on class
                     print(f"field {field_name} not found on class {class_name}")
                     return False
 
@@ -116,8 +107,6 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status [ Language 
                 max_len = getattr(prop, 'MaxLen', 0) or 0
                 min_val = getattr(prop, 'MinVal', None)
                 max_val = getattr(prop, 'MaxVal', None)
-
-                # Normalize type
                 pt = (prop_type or '%String').lower()
 
                 if '%integer' in pt or 'int' in pt:
@@ -141,11 +130,9 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status [ Language 
                         print(f"{field_name}: String exceeds limit of {max_len} characters")
                         return False
 
-                # Numeric bounds
                 if ('%integer' in pt or '%double' in pt or '%float' in pt or
                         'int' in pt or 'double' in pt or 'float' in pt or 'decimal' in pt):
                     try:
-                        # value may be string — cast to float for comparison
                         cmp_value = float(value)
                         if min_val is not None and cmp_value < float(min_val):
                             print(f"{field_name}: Value {value} lower than allowed {min_val}")
@@ -154,7 +141,6 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status [ Language 
                             print(f"{field_name}: Value {value} greater than allowed {max_val}")
                             return False
                     except Exception:
-                        # If casting fails, validation fails
                         print(f"{field_name}: Could not compare numeric bounds for value '{value}'")
                         return False
 
@@ -186,8 +172,6 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status [ Language 
 
                 last_piece = api_class_name.split('.')[-1]
                 test_class_name = f"ToolQA.tool.QA.{last_piece}Test"
-
-                # Begin building test file code
                 code_lines = []
                 code_lines.append("import iris")
                 code_lines.append("import traceback")
@@ -213,7 +197,7 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status [ Language 
 
                 for i in range(1, method_count + 1):
                     method = methods.GetAt(i)
-                    # Only public class methods (skip private and instance methods)
+
                     if getattr(method, 'ClassMethod', False) and not getattr(method, 'Private', False):
                         method_name = method.Name
                         if method_name.startswith('%'):
@@ -234,23 +218,16 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status [ Language 
                                 param_name = param['name']
                                 param_type = param['type']
                                 test_value = cls._create_fake_value(param_type)
-
-                                # declare variable
                                 args_code.append(f"            {param_name} = {test_value}")
-
-                                # check schema class for field validation
                                 schema_class = cls._find_schema_class(param_name)
                                 if schema_class:
                                     args_code.append(f"            # Validating field {param_name} with schema {schema_class}")
-                                    # call validate routine packaged inside generated file (we'll include a local helper)
                                     args_code.append(f"            from iris import cls as _iris_cls")
                                     args_code.append(f"            # We will not call external validate function from here to keep generated test self-contained;")
                                     args_code.append(f"            # If you need pre-call validation, run Validate separately.")
                                     args_code.append(f"            # (Schema class detected: {schema_class})")
 
                                 arg_list.append(param_name)
-
-                        # append args declarations
                         if args_code:
                             for ln in args_code:
                                 code_lines.append(ln)
@@ -270,8 +247,6 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status [ Language 
                         code_lines.append("            print(f'  ✗ Error in test {method_name}: {str(ex)}')")
                         code_lines.append("            print(f'    Traceback: {traceback.format_exc()}')")
                         code_lines.append("")
-
-                # Resume summary
                 code_lines.append("        # Resume tests")
                 code_lines.append("        print('-' * 50)")
                 code_lines.append("        print(f'\\nResume Tests:')")
@@ -299,7 +274,6 @@ ClassMethod GenerateTestForClass(apiClassName As %String) As %Status [ Language 
                 traceback.print_exc()
                 return 0
 
-    # Execute generation
     try:
         res = Tool.generate_test_for_class(api_class_name)
         if res == 1:
@@ -317,7 +291,6 @@ ClassMethod RunTest(testClassName As %String) As %Status [ Language = python ]
     import iris, sys, importlib, os, traceback
 
     try:
-        # Ensure temp dir in path
         try:
             tmpdir = iris.system.Util.GetEnviron("ISC_TMPDIR")
             if not tmpdir:
@@ -329,7 +302,6 @@ ClassMethod RunTest(testClassName As %String) As %Status [ Language = python ]
             sys.path.append(tmpdir)
 
         module_name = testClassName.replace('.', '_')
-        # importlib may cache modules: reload if already loaded to pick up changes
         if module_name in sys.modules:
             importlib.reload(sys.modules[module_name])
             module = sys.modules[module_name]

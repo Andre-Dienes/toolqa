@@ -1,189 +1,171 @@
-Tool – Automatic Test Class Generator for InterSystems IRIS
+🧪 IRIS Automated Test Generator
 
-This project provides a Python utility to automatically generate and execute unit tests for classes in InterSystems IRIS.
-It dynamically inspects a given IRIS class, extracts its public class methods, and generates a Python-based test class that validates their execution with sample input values.
+This project provides an ObjectScript class with Embedded Python that automatically generates and runs test classes for InterSystems IRIS classes.
 
-🚀 Features
+It allows you to:
 
-🔍 Class Introspection
-Uses %Dictionary.ClassDefinition to explore class metadata and methods.
+Inspect an existing IRIS class (%Dictionary.ClassDefinition)
 
-⚙️ Automatic Test Class Generation
-Creates a new Python test class for each IRIS class inspected, stored in /tmp.
+Generate a Python-based test class dynamically
 
-🧪 Method Invocation with Fake Data
-Supports generating fake values for method parameters based on IRIS data types (%String, %Integer, %Float, %Date, etc.).
+Save the test class in /tmp
 
-✅ Field Validation
-Validates parameters against schema constraints using %Dictionary.CompiledPropertyDefinition.
+Run the tests and see a success/failure report
 
-📊 Execution Report
-Each test run shows:
+📂 Class Structure
 
-Total tests executed
+The main entrypoint is:
 
-Number of successes
-
-Number of failures
-
-Success rate percentage
-
-🔄 Reusable Test Runner
-Generated test classes can be executed later with the built-in runner.
-
-📦 Installation
-
-Ensure you have InterSystems IRIS installed and accessible.
-
-Install the Python iris library (usually provided with IRIS Python client):
-
-pip install intersystems-iris
+Class ToolQA.tool.BP.Tool
 
 
-Clone or copy this repository into your project.
+It exposes two class methods:
 
-🛠 Usage
-1. Generate a Test Class
-from tool import Tool
+GenerateTestForClass(apiClassName As %String)
 
-Tool.generate_test_for_class("Demo.App.Customer")
+Reads the methods of the given IRIS class
 
+Generates a new Python test file under /tmp
 
-➡️ This will:
+Each public class method is tested with fake arguments and validations
 
-Inspect the class Demo.App.Customer.
+Prints out a summary of total tests, successes, and failures
 
-Create a new Python file under /tmp/Demo_App_CustomerTest.py.
+RunTest(testClassName As %String)
 
-Include automatically generated test methods.
+Loads the generated Python test module from /tmp
 
-2. Run the Generated Test
-Tool.run_test("ToolQA.tool.QA.CustomerTest")
+Executes the test runner (.run()) method
 
+Prints the test results and returns 1 (success) or 0 (failure)
 
-➡️ This will:
+⚙️ How It Works
 
-Import the generated test module.
+Written as an IRIS ObjectScript class, but with methods implemented in Python ([ Language = python ])
 
-Run all tests inside it.
+Uses IRIS Embedded Python (import iris) to query the system dictionary and introspect classes
 
-Print a summary report.
+Dynamically builds Python code for the test class and writes it into /tmp/ToolQA_tool_QA_<ClassName>Test.py
 
-📂 Example – End-to-End
-Step 1: Example IRIS Class (Demo.App.Customer.cls)
-Class Demo.App.Customer Extends (%RegisteredObject, %Library.ClassDefinition) {
+Fake values are generated automatically for method parameters (strings, integers, floats, dates, etc.)
 
-ClassMethod GetCustomerName(ByVal ID As %Integer) As %String
-{
-    Quit "Customer #" _ ID
-}
+Tests validate arguments against schema properties (%Dictionary.CompiledPropertyDefinition) when available
 
-ClassMethod CalculateDiscount(ByVal Amount As %Double) As %Double
-{
-    Quit Amount * 0.1
-}
+A final report is printed showing:
 
-}
+------------------------------------------
+Resume Tests:
+  Total tests: 5
+  Success: 4
+  Fails: 1
+  Success rate: 80.00%
 
-Step 2: Generate Test Class in Python
-from tool import Tool
+▶️ Running the Tool
+1. Generate Tests
 
-Tool.generate_test_for_class("Demo.App.Customer")
+From an IRIS session, run:
+
+do ##class(ToolQA.tool.BP.Tool).GenerateTestForClass("ToolQA.tool.BP.forecast")
 
 
-This creates /tmp/Demo_App_CustomerTest.py with code like:
+Output:
 
-import iris
-import traceback
+✅ Python test class saved in: /tmp/ToolQA_tool_QA_forecastTest.py
 
-class ToolQA_tool_QA_CustomerTest:
-    '''
-    Class test automatizeded to Demo.App.Customer
-    Create on: 2025-09-23 13:00:00
-    '''
+2. Run Tests
 
-    @classmethod
-    def run(cls):
-        print('Starting tests for: Demo.App.Customer')
-        print('-' * 50)
-        errors = 0
-        tests = 0
+Now run the generated test:
 
-        # Testing method: GetCustomerName
-        tests += 1
-        try:
-            print(f'\nTesting method: GetCustomerName')
-            ID = 123
-            api_class = iris.cls('Demo.App.Customer')
-            result = api_class.GetCustomerName(ID)
-            print(f'  ✓ Method GetCustomerName executed with sucess')
-            if result:
-                print(f'    Result: {result}')
-        except Exception as ex:
-            errors += 1
-            print(f'  ✗ Error in test GetCustomerName: {str(ex)}')
-            print(f'    Traceback: {traceback.format_exc()}')
-
-        # Testing method: CalculateDiscount
-        tests += 1
-        try:
-            print(f'\nTesting method: CalculateDiscount')
-            Amount = 123.45
-            api_class = iris.cls('Demo.App.Customer')
-            result = api_class.CalculateDiscount(Amount)
-            print(f'  ✓ Method CalculateDiscount executed with sucess')
-            if result:
-                print(f'    Result: {result}')
-        except Exception as ex:
-            errors += 1
-            print(f'  ✗ Error in test CalculateDiscount: {str(ex)}')
-            print(f'    Traceback: {traceback.format_exc()}')
-
-        # Resume tests
-        print('-' * 50)
-        print(f'\nResume Tests:')
-        print(f'  Total tests: {tests}')
-        print(f'  Sucess: {tests - errors}')
-        print(f'  Fails: {errors}')
-        success_rate = ((tests - errors) / tests * 100) if tests > 0 else 0
-        print(f'  Tax of sucess: {success_rate:.2f}%')
-        return errors == 0
-
-Step 3: Run Tests
-Tool.run_test("ToolQA.tool.QA.CustomerTest")
+do ##class(ToolQA.tool.BP.Tool).RunTest("ToolQA.tool.QA.forecastTest")
 
 
-Console Output:
+Output:
 
-Starting tests for: Demo.App.Customer
+▶ Running ToolQA.tool.QA.forecastTest...
+Starting tests for: ToolQA.tool.BP.forecast
 --------------------------------------------------
-
-Testing method: GetCustomerName
-  ✓ Method GetCustomerName executed with sucess
-    Result: Customer #123
-
-Testing method: CalculateDiscount
-  ✓ Method CalculateDiscount executed with sucess
-    Result: 12.345
-
+✓ Method OnRequest executed with success
 --------------------------------------------------
 Resume Tests:
-  Total tests: 2
-  Sucess: 2
+  Total tests: 1
+  Success: 1
   Fails: 0
-  Tax of sucess: 100.00%
+  Success rate: 100.00%
 
-🔮 Roadmap
+⚡ Quick Example with a Business Process
 
- Add support for instance methods (not only class methods).
+Let’s use your API Business Process:
 
- Improve fake data generator with more realistic values.
+Class ToolQA.tool.BP.forecast Extends Ens.BusinessProcess
+{
 
- Add integration with pytest for better automation.
+Method OnRequest(pRequest As ToolQA.tool.msg.Req, Output pResponse As ToolQA.tool.msg.Resp) As %Status
+{
+    Set tSC = $$$OK
+    Try {
+        Set aRequest = ##Class(ToolQA.tool.msg.Req).%New()
+        Set aRequest.startDate = "2025-07-20"
+        Set aRequest.endDate   = "2025-07-20"
+        $$$THROWONERROR(tSC,..SendRequestSync("OpenMeteo",aRequest,.aResponse))
+        
+        If $IsObject(aResponse) {
+            // save to database or process the response as needed
+        }
+    } Catch ex {
+        Set tSC = ex.AsStatus()
+    }
+    Quit tSC
+}
+}
 
- Extend validation to foreign keys and enumerations.
+Step 1: Generate the Test
+do ##class(ToolQA.tool.BP.Tool).GenerateTestForClass("ToolQA.tool.BP.forecast")
 
-📜 License
 
-This project is released under the MIT License.
-Feel free to use, modify, and distribute.
+This will inspect the OnRequest method and generate a test with fake ToolQA.tool.msg.Req request data.
+
+Step 2: Run the Test
+do ##class(ToolQA.tool.BP.Tool).RunTest("ToolQA.tool.QA.forecastTest")
+
+
+Expected output:
+
+Starting tests for: ToolQA.tool.BP.forecast
+--------------------------------------------------
+✓ Method OnRequest executed with success
+--------------------------------------------------
+Resume Tests:
+  Total tests: 1
+  Success: 1
+  Fails: 0
+  Success rate: 100.00%
+
+📌 Notes
+
+Generated Python files are stored in /tmp.
+
+Method arguments are filled with fake values depending on parameter type:
+
+%String → "test_string"
+
+%Integer → 123
+
+%Double/%Float → 123.45
+
+%Boolean → True
+
+%Date → "2024-01-01"
+
+%Time → "12:00:00"
+
+%Timestamp → "2024-01-01 12:00:00"
+
+Validation checks against IRIS schema definitions when available.
+
+Works with public class methods only (ClassMethod and not Private).
+
+✅ Requirements
+
+InterSystems IRIS 2022.1+ with Embedded Python enabled
+
+Write permissions to /tmp for saving generated Python files
