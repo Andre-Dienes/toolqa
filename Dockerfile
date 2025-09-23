@@ -23,10 +23,8 @@ RUN --mount=type=bind,src=.,dst=. \
 
 FROM $IMAGE AS final
 
-# Copia script de sincronização de dados
 ADD --chown=${ISC_PACKAGE_MGRUSER}:${ISC_PACKAGE_IRISGROUP} https://github.com/grongierisc/iris-docker-multi-stage-script/releases/latest/download/copy-data.py /home/irisowner/dev/copy-data.py
 
-# Copia o .iris_init se for necessário manter aliases
 COPY .iris_init /home/irisowner/.iris_init
 
 RUN --mount=type=bind,source=/,target=/builder/root,from=builder \

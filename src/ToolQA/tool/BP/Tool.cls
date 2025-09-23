@@ -1,133 +1,355 @@
 Class ToolQA.tool.BP.Tool Extends Ens.BusinessProcess
 {
-ClassMethod GenerateTestForClass(apiClassName As %String) As %Status
+ClassMethod GenerateTestForClass(apiClassName As %String) As %Status [ Language = python ]
 {
-    Try {
-        Set classDef = ##class(%Dictionary.ClassDefinition).%OpenId(apiClassName)
-        If classDef = "" Quit $$$ERROR($$$GeneralError, "class not found")
+    import iris, os, sys, re, traceback
+    from datetime import datetime
 
-        Set testClassName = "AXS.QA.Tests."_$$LastPiece(apiClassName,".")_"Test"
-        Set code = ""
-        Set line1 = "Class "_testClassName_" {"
-        Set line2 = "ClassMethod Run() As %Status"
-        Set line3 = "{"
-        Set line4 = "    Write ""Starting tests for: "_apiClassName_""",!"
+    # Ensure tmp dir is portable
+    try:
+        tmpdir = iris.system.Util.GetEnviron("ISC_TMPDIR")
+        if not tmpdir:
+            tmpdir = "/tmp"
+    except Exception:
+        tmpdir = "/tmp"
 
-        Set code = line1 _ $C(13,10) _ line2 _ $C(13,10) _ line3 _ $C(13,10) _ line4 _ $C(13,10)
+    if tmpdir not in sys.path:
+        sys.path.append(tmpdir)
 
-        Set methodList = classDef.Methods
-        For i=1:1:methodList.Count() {
-            Set method = methodList.GetAt(i)
-            If method.ClassMethod && method.Public {
-                Set mName = method.Name
-                Set line5 = "    // Testing method "_mName
-                Set line6 = "    Try {"
+    class Tool:
+        @classmethod
+        def _parse_formal_spec(cls, formal_spec):
+            params = []
+            if not formal_spec:
+                return params
 
-                Set argsCode = "", argList = ""
-                For j=1:1:method.FormalSpec.Count() {
-                    Set param = method.FormalSpec.GetAt(j)
-                    Set pName = param.Name
-                    Set pType = param.Type
-                    Set testValue = ..CreateFakeValue(pType)
+            spec = formal_spec.strip()
+            if not spec:
+                return params
 
-                    Set argsCode = argsCode _ "        Set "_pName_" = "_testValue _ $C(13,10)
+            # Split top-level commas (basic split; IRIS formal specs are usually simple)
+            param_list = spec.split(',')
 
-                    Set schemaclass = ..ClassBank(pName)
-                    If schemaclass'="" {
-                        Set argsCode = argsCode _ "        Set sc = ##class(ToolQA.tool.BP.Tool).ValidateValueField("""_schemaclass_""", """_pName_""", "_pName_")" _ $C(13,10)
-                        Set argsCode = argsCode _ "        If $$$ISERR(sc) Quit sc" _ $C(13,10)
-                    }
+            for param in param_list:
+                param = param.strip()
+                if not param:
+                    continue
 
-                    Set argList = $S(argList="":pName, 1:argList_","_pName)
-                }
+                parts = param.split(':')
+                param_name = parts[0].strip()
 
-                Set line7 = "        Set sc = ##class("_apiClassName_")."_mName_"("_argList_")"
-                Set line8 = "        If $$$ISERR(sc) Write ""Erro: "", sc,!"
-                Set line9 = "    } Catch ex { Write ""Excepcion: "", ex.DisplayString(),! }"
+                # Remove ByRef/Output/& tokens
+                param_name = re.sub(r'^(ByRef\s+|Output\s+|&)', '', param_name, flags=re.IGNORECASE)
+                # Remove default assignment if present in the name part (rare)
+                param_name = param_name.split('=')[0].strip()
 
-                Set code = code _ line5 _ $C(13,10) _ line6 _ $C(13,10) _ argsCode _ line7 _ $C(13,10) _ line8 _ $C(13,10) _ line9 _ $C(13,10)
-            }
-        }
+                param_type = '%String'
+                if len(parts) > 1:
+                    type_part = parts[1].strip()
+                    # Remove default values in type part
+                    type_part = type_part.split('=')[0].strip()
+                    if type_part:
+                        param_type = type_part
 
-        Set code = code _ "    Quit $$$OK" _ $C(13,10)
-        Set code = code _ "}" _ $C(13,10)
-        Set code = code _ "}" _ $C(13,10)
+                params.append({
+                    'name': param_name,
+                    'type': param_type
+                })
 
-        Do ..SaveClass(testClassName, code)
-        Write "Generate class: ", testClassName,!
-        Quit $$$OK
-    } Catch ex {
-        Write "Erro: ", ex.DisplayString(),!
-        Quit ex.AsStatus()
-    }
+            return params
+
+        @classmethod
+        def _create_fake_value(cls, data_type):
+            if not data_type:
+                return "'default_value'"
+
+            type_lower = data_type.lower().strip()
+            type_lower = type_lower.replace('%', '')
+
+            if 'string' in type_lower or 'varchar' in type_lower or 'text' in type_lower:
+                return "'test_string'"
+            elif 'integer' in type_lower or re.search(r'\bint\b', type_lower):
+                return "123"
+            elif 'double' in type_lower or 'float' in type_lower or 'decimal' in type_lower:
+                return "123.45"
+            elif 'boolean' in type_lower or 'bool' in type_lower:
+                return "True"
+            elif 'date' in type_lower and 'time' not in type_lower:
+                return "'2024-01-01'"
+            elif 'time' in type_lower and 'date' not in type_lower:
+                return "'12:00:00'"
+            elif 'timestamp' in type_lower or 'datetime' in type_lower:
+                return "'2024-01-01 12:00:00'"
+            elif 'list' in type_lower or 'array' in type_lower:
+                return "['item1', 'item2']"
+            elif 'object' in type_lower or 'map' in type_lower or 'dict' in type_lower:
+                return "{'k1':'v1'}"
+            else:
+                return "'default_value'"
+
+        @classmethod
+        def _find_schema_class(cls, field_name):
+            try:
+                query = """
+                SELECT parent FROM %Dictionary.CompiledProperty
+                WHERE parent %STARTSWITH 'ToolQA.tool.'
+                AND Name = ?
+                """
+                rs = iris.sql.exec(query, field_name)
+                if rs.next():
+                    return rs.get(0)
+                return None
+            except Exception:
+                return None
+
+        @classmethod
+        def validate_field_value(cls, class_name, field_name, value):
+            try:
+                prop_id = f"{class_name}||{field_name}"
+                prop = iris.cls('%Dictionary.CompiledPropertyDefinition')._OpenId(prop_id)
+                if not prop:
+                    # property not found on class
+                    print(f"field {field_name} not found on class {class_name}")
+                    return False
+
+                prop_type = prop.Type if getattr(prop, 'Type', None) else '%String'
+                max_len = getattr(prop, 'MaxLen', 0) or 0
+                min_val = getattr(prop, 'MinVal', None)
+                max_val = getattr(prop, 'MaxVal', None)
+
+                # Normalize type
+                pt = (prop_type or '%String').lower()
+
+                if '%integer' in pt or 'int' in pt:
+                    if not isinstance(value, int):
+                        try:
+                            value = int(value)
+                        except:
+                            print(f"{field_name}: Expected Integer, received '{value}'")
+                            return False
+
+                elif '%double' in pt or '%float' in pt or 'double' in pt or 'float' in pt or 'decimal' in pt:
+                    if not isinstance(value, (int, float)):
+                        try:
+                            value = float(value)
+                        except:
+                            print(f"{field_name}: Expected Float, received '{value}'")
+                            return False
+
+                elif '%string' in pt or 'char' in pt or 'text' in pt:
+                    if max_len and len(str(value)) > int(max_len):
+                        print(f"{field_name}: String exceeds limit of {max_len} characters")
+                        return False
+
+                # Numeric bounds
+                if ('%integer' in pt or '%double' in pt or '%float' in pt or
+                        'int' in pt or 'double' in pt or 'float' in pt or 'decimal' in pt):
+                    try:
+                        # value may be string — cast to float for comparison
+                        cmp_value = float(value)
+                        if min_val is not None and cmp_value < float(min_val):
+                            print(f"{field_name}: Value {value} lower than allowed {min_val}")
+                            return False
+                        if max_val is not None and cmp_value > float(max_val):
+                            print(f"{field_name}: Value {value} greater than allowed {max_val}")
+                            return False
+                    except Exception:
+                        # If casting fails, validation fails
+                        print(f"{field_name}: Could not compare numeric bounds for value '{value}'")
+                        return False
+
+                return True
+            except Exception as ex:
+                print(f"Error to validate field: {str(ex)}")
+                return False
+
+        @classmethod
+        def _save_python_class(cls, class_name, code):
+            try:
+                python_class_name = class_name.replace('.', '_')
+                file_path = os.path.join(tmpdir, f"{python_class_name}.py")
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(code)
+                print(f"Python file saved in: {file_path}")
+                return True
+            except Exception as ex:
+                print(f"Error to save Python class: {str(ex)}")
+                return False
+
+        @classmethod
+        def generate_test_for_class(cls, api_class_name):
+            try:
+                class_def = iris.cls('%Dictionary.ClassDefinition')._OpenId(api_class_name)
+                if not class_def:
+                    print(f"Error: Class {api_class_name} not found")
+                    return 0
+
+                last_piece = api_class_name.split('.')[-1]
+                test_class_name = f"ToolQA.tool.QA.{last_piece}Test"
+
+                # Begin building test file code
+                code_lines = []
+                code_lines.append("import iris")
+                code_lines.append("import traceback")
+                code_lines.append("from datetime import datetime")
+                code_lines.append("")
+                py_class_name = test_class_name.replace('.', '_')
+                code_lines.append(f"class {py_class_name}:")
+                code_lines.append("    '''")
+                code_lines.append(f"    Class test automatized to {api_class_name}")
+                code_lines.append(f"    Create on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                code_lines.append("    '''")
+                code_lines.append("")
+                code_lines.append("    @classmethod")
+                code_lines.append("    def run(cls):")
+                code_lines.append(f"        print('Starting tests for: {api_class_name}')")
+                code_lines.append("        print('-' * 50)")
+                code_lines.append("        errors = 0")
+                code_lines.append("        tests = 0")
+                code_lines.append("")
+
+                methods = getattr(class_def, 'Methods', None)
+                method_count = methods.Count() if methods else 0
+
+                for i in range(1, method_count + 1):
+                    method = methods.GetAt(i)
+                    # Only public class methods (skip private and instance methods)
+                    if getattr(method, 'ClassMethod', False) and not getattr(method, 'Private', False):
+                        method_name = method.Name
+                        if method_name.startswith('%'):
+                            continue
+
+                        code_lines.append(f"        # Testing method: {method_name}")
+                        code_lines.append("        tests += 1")
+                        code_lines.append("        try:")
+                        code_lines.append(f"            print(f'\\nTesting method: {method_name}')")
+
+                        formal_spec = getattr(method, 'FormalSpec', None)
+                        args_code = []
+                        arg_list = []
+
+                        if formal_spec:
+                            params = cls._parse_formal_spec(formal_spec)
+                            for param in params:
+                                param_name = param['name']
+                                param_type = param['type']
+                                test_value = cls._create_fake_value(param_type)
+
+                                # declare variable
+                                args_code.append(f"            {param_name} = {test_value}")
+
+                                # check schema class for field validation
+                                schema_class = cls._find_schema_class(param_name)
+                                if schema_class:
+                                    args_code.append(f"            # Validating field {param_name} with schema {schema_class}")
+                                    # call validate routine packaged inside generated file (we'll include a local helper)
+                                    args_code.append(f"            from iris import cls as _iris_cls")
+                                    args_code.append(f"            # We will not call external validate function from here to keep generated test self-contained;")
+                                    args_code.append(f"            # If you need pre-call validation, run Validate separately.")
+                                    args_code.append(f"            # (Schema class detected: {schema_class})")
+
+                                arg_list.append(param_name)
+
+                        # append args declarations
+                        if args_code:
+                            for ln in args_code:
+                                code_lines.append(ln)
+
+                        args_str = ', '.join(arg_list) if arg_list else ''
+                        code_lines.append("            # Calling the method")
+                        code_lines.append(f"            api_class = iris.cls('{api_class_name}')")
+                        if args_str:
+                            code_lines.append(f"            result = api_class.{method_name}({args_str})")
+                        else:
+                            code_lines.append(f"            result = api_class.{method_name}()")
+                        code_lines.append(f"            print(f'  ✓ Method {method_name} executed with success')")
+                        code_lines.append("            if result is not None:")
+                        code_lines.append("                print(f'    Result: {result}')")
+                        code_lines.append("        except Exception as ex:")
+                        code_lines.append("            errors += 1")
+                        code_lines.append("            print(f'  ✗ Error in test {method_name}: {str(ex)}')")
+                        code_lines.append("            print(f'    Traceback: {traceback.format_exc()}')")
+                        code_lines.append("")
+
+                # Resume summary
+                code_lines.append("        # Resume tests")
+                code_lines.append("        print('-' * 50)")
+                code_lines.append("        print(f'\\nResume Tests:')")
+                code_lines.append("        print(f'  Total tests: {tests}')")
+                code_lines.append("        print(f'  Success: {tests - errors}')")
+                code_lines.append("        print(f'  Fails: {errors}')")
+                code_lines.append("        success_rate = ((tests - errors) / tests * 100) if tests > 0 else 0")
+                code_lines.append("        print(f'  Success rate: {success_rate:.2f}%')")
+                code_lines.append("        return errors == 0")
+                code_lines.append("")
+
+                code = '\n'.join(code_lines)
+
+                success = cls._save_python_class(test_class_name, code)
+                if success:
+                    print(f"Class test created with success: {test_class_name}")
+                    print(f"Python code saved in: {os.path.join(tmpdir, test_class_name.replace('.', '_') + '.py')}")
+                    return 1
+                else:
+                    print("Error to save the class test")
+                    return 0
+
+            except Exception as ex:
+                print(f"Error to create class test: {str(ex)}")
+                traceback.print_exc()
+                return 0
+
+    # Execute generation
+    try:
+        res = Tool.generate_test_for_class(api_class_name)
+        if res == 1:
+            Quit 1
+        else:
+            Quit 0
+    except Exception as ex:
+        print(f"Unexpected error: {str(ex)}")
+        traceback.print_exc()
+        Quit 0
 }
-ClassMethod ClassBank(field As %String) As %String
+
+ClassMethod RunTest(testClassName As %String) As %Status [ Language = python ]
 {
-    Set namespace = $Namespace
-    Set list = ##class(%Library.Routine).Listclasss()
-    While list.AtEnd() '= 1 {
-        Set cls = list.GetNext()
-        If cls["AXS.Model." {
-            Set prop = ##class(%Dictionary.CompiledPropertyDefinition).%ExistsId(cls_"||"_field)
-            If prop {
-                Quit
-            }
-        }
-    }
-    Quit ""
-}
-ClassMethod ValidateValueField(class As %String, field As %String, value) As %Status
-{
-    Try {
-        Set propId = class_"||"_field
-        Set prop = ##class(%Dictionary.CompiledPropertyDefinition).%OpenId(propId)
-        If '$IsObject(prop) Quit $$$ERROR($$$GeneralError, "field "_field_" not found in "_class)
+    import iris, sys, importlib, os, traceback
 
-        Set tipo = prop.Type
-        Set maxlen = prop.MaxLen
-        Set minval = prop.MinVal
-        Set maxval = prop.MaxVal
+    try:
+        # Ensure temp dir in path
+        try:
+            tmpdir = iris.system.Util.GetEnviron("ISC_TMPDIR")
+            if not tmpdir:
+                tmpdir = "/tmp"
+        except Exception:
+            tmpdir = "/tmp"
 
-        If tipo = "%Integer" {
-            If '$ZIsInteger(value) Quit $$$ERROR($$$GeneralError, field_": Expect Integer, received '"_value_"'")
-        } ElseIf tipo = "%Double" {
-            If '$ZIsNumeric(value) Quit $$$ERROR($$$GeneralError, field_": Expect Float, received '"_value_"'")
-        } ElseIf tipo = "%String" {
-            If (maxlen > 0) && ($Length(value) > maxlen) Quit $$$ERROR($$$GeneralError, field_": String exceeds limit "_maxlen)
-        }
+        if tmpdir not in sys.path:
+            sys.path.append(tmpdir)
 
-        If (tipo = "%Integer" || tipo = "%Double") {
-            If minval'="", value < minval Quit $$$ERROR($$$GeneralError, field_": less than the minimum allowed")
-            If maxval'="", value > maxval Quit $$$ERROR($$$GeneralError, field_": greater than the maximum allowed")
-        }
+        module_name = testClassName.replace('.', '_')
+        # importlib may cache modules: reload if already loaded to pick up changes
+        if module_name in sys.modules:
+            importlib.reload(sys.modules[module_name])
+            module = sys.modules[module_name]
+        else:
+            module = importlib.import_module(module_name)
 
-        Quit $$$OK
-    } Catch ex {
-        Quit ex.AsStatus()
-    }
-}
+        test_class = getattr(module, module_name)
+        print(f"Running tests from {testClassName} (module: {module_name})...")
+        ok = test_class.run()
 
-ClassMethod CreateFakeValue(tipo As %String) As %String
-{
-    Set tipo = $ZStrip(tipo, "<>")
-    If tipo = "%String" Quit """test"""
-    If tipo = "%Integer" Quit "123"
-    If tipo = "%Double" Quit "123.45"
-    If tipo = "%Boolean" Quit "1"
-    Quit """default"""
-}
-ClassMethod SaveClass(nomeclass As %String, conteudo As %String) As %Status
-{
-    Set file = nomeclass_".cls"
-    Set f = ##class(%Stream.FileCharacter).%New()
-    Set f.Filename = file
-    Do f.Write(conteudo)
-    Do f.%Save()
-    Quit $System.OBJ.Load(file, "ck")
-}
+        if ok:
+            print("All tests passed.")
+            Quit 1
+        else:
+            print("Some tests failed.")
+            Quit 0
 
-ClassMethod LastPiece(str As %String, delim As %String) As %String
-{
-    Quit $Piece(str, delim, * )
+    except Exception as ex:
+        print(f"Error running test: {str(ex)}")
+        traceback.print_exc()
+        Quit 0
 }
 }

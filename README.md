@@ -1,149 +1,189 @@
-📘 Description of ToolQA.tool.BP.Tool Test Generation Class
-Overview
-The class ToolQA.tool.BP.Tool is designed as an automated intelligent test agent for API classes in InterSystems IRIS. Its main responsibility is to:
+Tool – Automatic Test Class Generator for InterSystems IRIS
 
-Automatically generate test classes for any provided API class;
+This project provides a Python utility to automatically generate and execute unit tests for classes in InterSystems IRIS.
+It dynamically inspects a given IRIS class, extracts its public class methods, and generates a Python-based test class that validates their execution with sample input values.
 
-Introspect the API class methods and parameters using IRIS class metadata;
+🚀 Features
 
-Generate synthetic test values for each method parameter based on its type;
+🔍 Class Introspection
+Uses %Dictionary.ClassDefinition to explore class metadata and methods.
 
-Validate those test values against your database schema before invoking the API method, ensuring type and boundary compliance;
+⚙️ Automatic Test Class Generation
+Creates a new Python test class for each IRIS class inspected, stored in /tmp.
 
-Compile and save the generated test class in the IRIS environment;
+🧪 Method Invocation with Fake Data
+Supports generating fake values for method parameters based on IRIS data types (%String, %Integer, %Float, %Date, etc.).
 
-Provide an executable Run() method within the generated test class to perform the tests and report results.
+✅ Field Validation
+Validates parameters against schema constraints using %Dictionary.CompiledPropertyDefinition.
 
-**How It Works**
-1. Input
-You call the method:
+📊 Execution Report
+Each test run shows:
 
-DO ##class(ToolQA.tool.BP.Tool).GenerateTestForClass("Your.API.ClassName")
-with the fully qualified name of the API class you want to test.
+Total tests executed
 
-2. Introspection and Metadata Analysis
-The tool uses IRIS’ %Dictionary.ClassDefinition to:
+Number of successes
 
-Open the API class definition;
+Number of failures
 
-Enumerate all public class methods;
+Success rate percentage
 
-Extract each method’s parameter names and types.
+🔄 Reusable Test Runner
+Generated test classes can be executed later with the built-in runner.
 
-3. Synthetic Test Data Generation
-For each method parameter:
+📦 Installation
 
-The method CreateFakeValue generates a dummy value compatible with the parameter’s type (e.g., string, integer, double);
+Ensure you have InterSystems IRIS installed and accessible.
 
-The tool attempts to find a mapping between parameters and persistent database classes/fields through the ClassBank method, scanning known persistent classes for matching fields;
+Install the Python iris library (usually provided with IRIS Python client):
 
-If a mapping exists, the generated dummy value is validated against the database field’s type and constraints (ValidateValueField), checking type correctness, length limits, and numeric bounds.
-
-4. Test Class Generation
-The agent dynamically creates a new test class with the naming convention:
+pip install intersystems-iris
 
 
-ToolQA.QA.Tests.<APIClassName>Test
-The class contains a Run() class method that:
+Clone or copy this repository into your project.
 
-Prints the test start message;
+🛠 Usage
+1. Generate a Test Class
+from tool import Tool
 
-Executes each API method with generated parameters, after validation;
+Tool.generate_test_for_class("Demo.App.Customer")
 
-Catches and logs errors or exceptions during method calls;
 
-Reports test success or failure.
+➡️ This will:
 
-5. Compilation and Execution
-The generated test class is saved as a .cls file and compiled automatically within IRIS. You then execute tests by running:
+Inspect the class Demo.App.Customer.
 
-DO ##class(ToolQA.QA.Tests.<APIClassName>Test).Run()
-How Responses and Results Are Handled
-The test class captures the return status (%Status) of each API method call;
+Create a new Python file under /tmp/Demo_App_CustomerTest.py.
 
-Errors (non-success status codes) are printed to the console with details;
+Include automatically generated test methods.
 
-Exceptions thrown by API methods are caught and logged with their stack trace;
+2. Run the Generated Test
+Tool.run_test("ToolQA.tool.QA.CustomerTest")
 
-Since the agent generates synthetic inputs, it does not currently validate response content beyond execution success — but you can extend the test class to add assertions on output objects or returned data structures as needed.
 
-🐳 Step-by-Step Guide: Docker Installation and Running Tests
-This section assumes you want to run your InterSystems IRIS instance with Docker and deploy/test your classes in this environment.
+➡️ This will:
 
-Step 1: Install Docker
-For Windows or macOS
-Download Docker Desktop:
-https://www.docker.com/products/docker-desktop
+Import the generated test module.
 
-Run the installer and follow the setup instructions.
+Run all tests inside it.
 
-After installation, launch Docker Desktop and verify it's running by opening a terminal/PowerShell and running:
+Print a summary report.
 
-docker --version
-You should see the Docker version printed.
+📂 Example – End-to-End
+Step 1: Example IRIS Class (Demo.App.Customer.cls)
+Class Demo.App.Customer Extends (%RegisteredObject, %Library.ClassDefinition) {
 
-For Linux (Ubuntu example)
+ClassMethod GetCustomerName(ByVal ID As %Integer) As %String
+{
+    Quit "Customer #" _ ID
+}
 
-sudo apt update
-sudo apt install -y docker.io
-sudo systemctl start docker
-sudo systemctl enable docker
-docker --version
-Step 2: Pull InterSystems IRIS Community Edition Docker Image
+ClassMethod CalculateDiscount(ByVal Amount As %Double) As %Double
+{
+    Quit Amount * 0.1
+}
 
-docker pull intersystems/iris-community
-Step 3: Run IRIS Container
-Run the container with ports exposed (you can customize the ports):
+}
 
-docker run --name my-iris -d \
-  -p 52773:52773 \
-  -p 52774:52774 \
-  -e ISC_PASSWORD=YourPasswordHere \
-  intersystems/iris-community
-Replace YourPasswordHere with a secure password.
+Step 2: Generate Test Class in Python
+from tool import Tool
 
-Step 4: Access IRIS Management Portal
-Open a browser and navigate to:
+Tool.generate_test_for_class("Demo.App.Customer")
 
-http://localhost:52773/csp/sys/UtilHome.csp
-Login with:
 
-Username: _SYSTEM
+This creates /tmp/Demo_App_CustomerTest.py with code like:
 
-Password: the one you set for ISC_PASSWORD
+import iris
+import traceback
 
-Step 5: Import Your Classes
-You can either:
+class ToolQA_tool_QA_CustomerTest:
+    '''
+    Class test automatizeded to Demo.App.Customer
+    Create on: 2025-09-23 13:00:00
+    '''
 
-Use the Management Portal’s Code Editor to paste your .cls code (including ToolQA.tool.BP.Tool and your API classes), then compile;
-OR
+    @classmethod
+    def run(cls):
+        print('Starting tests for: Demo.App.Customer')
+        print('-' * 50)
+        errors = 0
+        tests = 0
 
-Use Docker volumes or IRIS Terminal to load .cls files.
+        # Testing method: GetCustomerName
+        tests += 1
+        try:
+            print(f'\nTesting method: GetCustomerName')
+            ID = 123
+            api_class = iris.cls('Demo.App.Customer')
+            result = api_class.GetCustomerName(ID)
+            print(f'  ✓ Method GetCustomerName executed with sucess')
+            if result:
+                print(f'    Result: {result}')
+        except Exception as ex:
+            errors += 1
+            print(f'  ✗ Error in test GetCustomerName: {str(ex)}')
+            print(f'    Traceback: {traceback.format_exc()}')
 
-Step 6: Run the Test Generation
-In IRIS Terminal or Studio:
+        # Testing method: CalculateDiscount
+        tests += 1
+        try:
+            print(f'\nTesting method: CalculateDiscount')
+            Amount = 123.45
+            api_class = iris.cls('Demo.App.Customer')
+            result = api_class.CalculateDiscount(Amount)
+            print(f'  ✓ Method CalculateDiscount executed with sucess')
+            if result:
+                print(f'    Result: {result}')
+        except Exception as ex:
+            errors += 1
+            print(f'  ✗ Error in test CalculateDiscount: {str(ex)}')
+            print(f'    Traceback: {traceback.format_exc()}')
 
-DO ##class(ToolQA.tool.BP.Tool).GenerateTestForClass("ToolQA.tool.BP.forecast")
-This creates the test class:
+        # Resume tests
+        print('-' * 50)
+        print(f'\nResume Tests:')
+        print(f'  Total tests: {tests}')
+        print(f'  Sucess: {tests - errors}')
+        print(f'  Fails: {errors}')
+        success_rate = ((tests - errors) / tests * 100) if tests > 0 else 0
+        print(f'  Tax of sucess: {success_rate:.2f}%')
+        return errors == 0
 
-ToolQA.QA.Tests.forecastTest
-Step 7: Execute the Generated Tests
-In Terminal or Studio:
+Step 3: Run Tests
+Tool.run_test("ToolQA.tool.QA.CustomerTest")
 
-DO ##class(ToolQA.QA.Tests.forecastTest).Run()
-Watch the output for:
 
-Test start message;
+Console Output:
 
-Each method tested with success or failure output;
+Starting tests for: Demo.App.Customer
+--------------------------------------------------
 
-Any errors or exceptions printed.
+Testing method: GetCustomerName
+  ✓ Method GetCustomerName executed with sucess
+    Result: Customer #123
 
-🔧 Extending and Customizing
-Add more precise mapping logic inside ClassBank() to fit your domain classes;
+Testing method: CalculateDiscount
+  ✓ Method CalculateDiscount executed with sucess
+    Result: 12.345
 
-Extend CreateFakeValue() to produce more realistic test data;
+--------------------------------------------------
+Resume Tests:
+  Total tests: 2
+  Sucess: 2
+  Fails: 0
+  Tax of sucess: 100.00%
 
-Add assertions to test response content or database side effects after method calls;
+🔮 Roadmap
 
-Integrate with CI/CD pipelines for automated regression testing.
+ Add support for instance methods (not only class methods).
+
+ Improve fake data generator with more realistic values.
+
+ Add integration with pytest for better automation.
+
+ Extend validation to foreign keys and enumerations.
+
+📜 License
+
+This project is released under the MIT License.
+Feel free to use, modify, and distribute.
